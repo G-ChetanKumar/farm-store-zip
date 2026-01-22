@@ -1,0 +1,49 @@
+.brand-scroller {
+    display: flex;
+    gap: 8px; /* Reduced gap for mobile view */
+    overflow: hidden;
+    animation: scroll 20s linear infinite;
+    padding-bottom: 8px;
+    width: 100%; /* Ensure it fits within the container */
+  }
+  
+  .brand-scroller.paused {
+    animation-play-state: paused;
+  }
+  
+  .brand-card {
+    flex-shrink: 0;
+    width: 128px;
+    height: 128px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+  }
+  
+  @keyframes scroll {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-100%); /* Adjusted to ensure smooth scroll */
+    }
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .brand-card {
+      width: 96px; /* Smaller size for mobile */
+      height: 96px;
+    }
+  
+    .brand-scroller {
+      gap: 4px; /* Reduce gap for better fit */
+      padding-bottom: 4px; /* Minimize padding */
+    }
+  }
+  

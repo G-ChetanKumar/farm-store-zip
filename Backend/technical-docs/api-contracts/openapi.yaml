@@ -1,0 +1,2202 @@
+# Auto-generated from code annotations. Do not edit by hand.
+openapi: 3.0.0
+info:
+  title: Farm E-Store API
+  version: 0.0.0
+tags:
+  - name: Auth
+  - name: Admin
+  - name: Users
+  - name: Addresses
+  - name: Cart
+  - name: Membership
+  - name: Credits
+  - name: Payments
+  - name: Coupons
+  - name: Products
+  - name: Categories
+  - name: Subcategories
+  - name: SuperCategories
+  - name: Brands
+  - name: Crops
+  - name: Pests
+  - name: Orders
+  - name: Counters
+  - name: Entrepreneurs
+paths:
+  /api/v1/auth/request-otp:
+    post:
+      tags: [Auth]
+      summary: Request OTP for login/registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mobile, user_type]
+              properties:
+                mobile:
+                  type: string
+                user_type:
+                  type: string
+                  enum: [Farmer, Agri-Retailer, Agent]
+      responses:
+        "200":
+          description: OTP sent
+  /api/v1/auth/resend-otp:
+    post:
+      tags: [Auth]
+      summary: Resend OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mobile, user_type]
+              properties:
+                mobile:
+                  type: string
+                user_type:
+                  type: string
+                  enum: [Farmer, Agri-Retailer, Agent]
+      responses:
+        "200":
+          description: OTP resent
+  /api/v1/auth/verify-otp:
+    post:
+      tags: [Auth]
+      summary: Verify OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mobile, otp]
+              properties:
+                mobile:
+                  type: string
+                otp:
+                  type: string
+      responses:
+        "200":
+          description: OTP verified
+  /api/v1/auth/complete-profile:
+    post:
+      tags: [Auth]
+      summary: Complete user profile after OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mobile, name, user_type]
+              properties:
+                mobile:
+                  type: string
+                name:
+                  type: string
+                email:
+                  type: string
+                user_type:
+                  type: string
+                  enum: [Farmer, Agri-Retailer, Agent]
+                gstin:
+                  type: string
+                license_number:
+                  type: string
+                license_doc_url:
+                  type: string
+                agent_code:
+                  type: string
+      responses:
+        "200":
+          description: Profile completed
+  /api/admin/admin-register:
+    post:
+      tags: [Admin]
+      summary: Register admin
+      security:
+        - adminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "201":
+          description: Admin registered
+  /api/admin/admin-login:
+    post:
+      tags: [Admin]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Admin logged in
+  /api/admin/admin-update/{id}:
+    patch:
+      tags: [Admin]
+      summary: Update admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Admin updated
+  /api/admin/get-admin:
+    get:
+      tags: [Admin]
+      summary: Get admin by fixed id
+      responses:
+        "200":
+          description: Admin
+  /api/admin/users/pending:
+    get:
+      tags: [Admin]
+      summary: List pending users
+      security:
+        - adminBearerAuth: []
+      responses:
+        "200":
+          description: Pending users
+  /api/admin/users/{id}/approve:
+    patch:
+      tags: [Admin]
+      summary: Approve user
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User approved
+  /api/admin/users/{id}/reject:
+    patch:
+      tags: [Admin]
+      summary: Reject user
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: User rejected
+  /api/admin/users/{id}/block:
+    patch:
+      tags: [Admin]
+      summary: Block user
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: User blocked
+  /api/admin/users/{id}/unblock:
+    patch:
+      tags: [Admin]
+      summary: Unblock user
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User unblocked
+  /api/admin/users:
+    post:
+      tags: [Admin]
+      summary: Create user by admin
+      security:
+        - adminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mobile, user_type]
+              properties:
+                mobile:
+                  type: string
+                user_type:
+                  type: string
+                  enum: [Farmer, Agri-Retailer, Agent]
+                name:
+                  type: string
+                email:
+                  type: string
+                gstin:
+                  type: string
+                license_number:
+                  type: string
+                license_doc_url:
+                  type: string
+                agent_code:
+                  type: string
+                status:
+                  type: string
+                  enum: [pending, active, rejected, blocked]
+      responses:
+        "201":
+          description: User created
+    get:
+      tags: [Admin]
+      summary: List users with optional filters
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, active, rejected, blocked]
+        - name: user_type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [Farmer, Agri-Retailer, Agent]
+        - name: mobile
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Users list
+  /api/admin/users/{id}/cart:
+    get:
+      tags: [Admin]
+      summary: Get user with cart and last payment status
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User cart and payment info
+  /api/admin/users/{id}/cart/check:
+    get:
+      tags: [Admin]
+      summary: Check user cart validity (stock, prices, availability)
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: User ID
+      responses:
+        "200":
+          description: User cart validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  valid:
+                    type: boolean
+                    description: True if cart has no issues
+                  data:
+                    type: object
+                    properties:
+                      user_id:
+                        type: string
+                      user_name:
+                        type: string
+                      user_type:
+                        type: string
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            product_id:
+                              type: string
+                            variant_id:
+                              type: string
+                            qty:
+                              type: number
+                            unit_price:
+                              type: number
+                            product_title:
+                              type: string
+                            product_sub_title:
+                              type: string
+                            current_stock:
+                              type: number
+                            current_price:
+                              type: number
+                      total_items:
+                        type: number
+                  issues:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        index:
+                          type: number
+                        product_id:
+                          type: string
+                        product_title:
+                          type: string
+                        variant_id:
+                          type: string
+                        issue:
+                          type: string
+                          enum: [product_not_found, out_of_stock, insufficient_stock, price_changed, variant_not_found, validation_error]
+                        message:
+                          type: string
+                        old_price:
+                          type: number
+                        new_price:
+                          type: number
+                        available_qty:
+                          type: number
+                        requested_qty:
+                          type: number
+                  has_issues:
+                    type: boolean
+                  summary:
+                    type: object
+                    properties:
+                      total_cart_items:
+                        type: number
+                      valid_items:
+                        type: number
+                      items_with_issues:
+                        type: number
+        "404":
+          description: User not found
+  /api/user/login:
+    post:
+      tags: [Users]
+      summary: User login (legacy email/password)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: User logged in
+  /api/user/add-user:
+    post:
+      tags: [Users]
+      summary: Create user (Farmer only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, mobile, user_type]
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                mobile:
+                  type: string
+                user_type:
+                  type: string
+      responses:
+        "200":
+          description: User created
+  /api/user/me:
+    get:
+      tags: [Users]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User profile
+    put:
+      tags: [Users]
+      summary: Update current user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+      responses:
+        "200":
+          description: User updated
+  /api/user/get-user:
+    get:
+      tags: [Users]
+      summary: Get all users
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Users list
+  /api/user/get-user-by-id/{id}:
+    get:
+      tags: [Users]
+      summary: Get user by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User
+  /api/user/update-user/{id}:
+    put:
+      tags: [Users]
+      summary: Update user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User updated
+  /api/user/delete-user/{id}:
+    delete:
+      tags: [Users]
+      summary: Delete user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User deleted
+  /api/v1/addresses:
+    post:
+      tags: [Addresses]
+      summary: Add address
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [label, line1, city, state, postal_code]
+              properties:
+                label:
+                  type: string
+                tag:
+                  type: string
+                name:
+                  type: string
+                phone:
+                  type: string
+                line1:
+                  type: string
+                line2:
+                  type: string
+                city:
+                  type: string
+                state:
+                  type: string
+                postal_code:
+                  type: string
+                country:
+                  type: string
+                is_default:
+                  type: boolean
+      responses:
+        "201":
+          description: Address created
+    get:
+      tags: [Addresses]
+      summary: List addresses
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Address list
+  /api/v1/addresses/{id}:
+    put:
+      tags: [Addresses]
+      summary: Update address
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                tag:
+                  type: string
+                name:
+                  type: string
+                phone:
+                  type: string
+                line1:
+                  type: string
+                line2:
+                  type: string
+                city:
+                  type: string
+                state:
+                  type: string
+                postal_code:
+                  type: string
+                country:
+                  type: string
+                is_default:
+                  type: boolean
+      responses:
+        "200":
+          description: Address updated
+    delete:
+      tags: [Addresses]
+      summary: Delete address
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Address deleted
+  /api/v1/addresses/{id}/default:
+    patch:
+      tags: [Addresses]
+      summary: Set default address
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Default address set
+  /api/v1/cart:
+    get:
+      tags: [Cart]
+      summary: Get cart
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Cart
+    put:
+      tags: [Cart]
+      summary: Replace cart
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      product_id:
+                        type: string
+                      variant_id:
+                        type: string
+                      qty:
+                        type: number
+                      unit_price:
+                        type: number
+                      original_price:
+                        type: number
+                      commission:
+                        type: number
+      responses:
+        "200":
+          description: Cart updated
+  /api/v1/cart/items:
+    post:
+      tags: [Cart]
+      summary: Add item to cart
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [product_id]
+              properties:
+                product_id:
+                  type: string
+                variant_id:
+                  type: string
+                qty:
+                  type: number
+                unit_price:
+                  type: number
+                original_price:
+                  type: number
+                commission:
+                  type: number
+      responses:
+        "200":
+          description: Item added
+  /api/v1/cart/items/{itemIndex}:
+    delete:
+      tags: [Cart]
+      summary: Remove item by index
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: itemIndex
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Item removed
+  /api/v1/cart/clear:
+    delete:
+      tags: [Cart]
+      summary: Clear cart
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Cart cleared
+  /api/v1/cart/check:
+    get:
+      tags: [Cart]
+      summary: Check cart validity (stock, prices, availability)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Cart validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  valid:
+                    type: boolean
+                    description: True if cart has no issues
+                  data:
+                    type: object
+                    properties:
+                      user_id:
+                        type: string
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            product_id:
+                              type: string
+                            variant_id:
+                              type: string
+                            qty:
+                              type: number
+                            unit_price:
+                              type: number
+                            product_title:
+                              type: string
+                            current_stock:
+                              type: number
+                            current_price:
+                              type: number
+                      total_items:
+                        type: number
+                  issues:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        index:
+                          type: number
+                        product_id:
+                          type: string
+                        variant_id:
+                          type: string
+                        issue:
+                          type: string
+                          enum: [product_not_found, out_of_stock, insufficient_stock, price_changed, variant_not_found, validation_error]
+                        message:
+                          type: string
+                        old_price:
+                          type: number
+                        new_price:
+                          type: number
+                        available_qty:
+                          type: number
+                  has_issues:
+                    type: boolean
+  /api/v1/membership/plans:
+    post:
+      tags: [Membership]
+      summary: Create membership plan
+      security:
+        - adminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, price, cashback_percent, validity_purchases, validity_days]
+              properties:
+                name:
+                  type: string
+                price:
+                  type: number
+                cashback_percent:
+                  type: number
+                gst_percent:
+                  type: number
+                validity_purchases:
+                  type: number
+                validity_days:
+                  type: number
+                can_club_coupons:
+                  type: boolean
+                  description: Allow combining membership discount with coupon codes
+      responses:
+        "201":
+          description: Plan created
+    get:
+      tags: [Membership]
+      summary: List membership plans
+      parameters:
+        - name: showAll
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["true", "false"]
+          description: Show all plans including inactive (admin only)
+      responses:
+        "200":
+          description: Plans
+  /api/v1/membership/plans/{id}:
+    put:
+      tags: [Membership]
+      summary: Update membership plan
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                price:
+                  type: number
+                cashback_percent:
+                  type: number
+                gst_percent:
+                  type: number
+                validity_purchases:
+                  type: number
+                validity_days:
+                  type: number
+                can_club_coupons:
+                  type: boolean
+                is_active:
+                  type: boolean
+      responses:
+        "200":
+          description: Plan updated
+        "404":
+          description: Plan not found
+    delete:
+      tags: [Membership]
+      summary: Delete membership plan
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Plan deleted
+        "400":
+          description: Cannot delete - active subscriptions exist
+        "404":
+          description: Plan not found
+  /api/v1/membership/plans/{id}/toggle:
+    patch:
+      tags: [Membership]
+      summary: Toggle plan active/inactive status
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Plan status toggled
+        "404":
+          description: Plan not found
+  /api/v1/membership/create-payment-order:
+    post:
+      tags: [Membership]
+      summary: Create Razorpay payment order for membership
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan_id]
+              properties:
+                plan_id:
+                  type: string
+      responses:
+        "200":
+          description: Payment order created
+        "403":
+          description: Not allowed for non-Farmers
+        "404":
+          description: Plan not found
+  /api/v1/membership/verify-payment:
+    post:
+      tags: [Membership]
+      summary: Verify payment and create subscription
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan_id, razorpay_order_id, razorpay_payment_id, razorpay_signature]
+              properties:
+                plan_id:
+                  type: string
+                razorpay_order_id:
+                  type: string
+                razorpay_payment_id:
+                  type: string
+                razorpay_signature:
+                  type: string
+      responses:
+        "201":
+          description: Subscription created successfully
+        "400":
+          description: Payment verification failed
+        "403":
+          description: Not allowed for non-Farmers
+  /api/v1/membership/subscribe:
+    post:
+      tags: [Membership]
+      summary: Subscribe to membership
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan_id]
+              properties:
+                plan_id:
+                  type: string
+      responses:
+        "201":
+          description: Subscription created
+  /api/v1/membership/subscription/{userId}:
+    get:
+      tags: [Membership]
+      summary: Get membership subscription
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Subscription
+  /api/v1/credits/ledger/{userId}:
+    get:
+      tags: [Credits]
+      summary: Get Kisan Cash ledger
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ledger
+  /api/v1/credits/earn:
+    post:
+      tags: [Credits]
+      summary: Earn Kisan Cash
+      security:
+        - adminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, amount]
+              properties:
+                user_id:
+                  type: string
+                order_id:
+                  type: string
+                amount:
+                  type: number
+      responses:
+        "200":
+          description: Earned
+  /api/v1/credits/redeem:
+    post:
+      tags: [Credits]
+      summary: Redeem Kisan Cash
+      security:
+        - adminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, amount, order_total]
+              properties:
+                user_id:
+                  type: string
+                order_id:
+                  type: string
+                amount:
+                  type: number
+                order_total:
+                  type: number
+      responses:
+        "200":
+          description: Redeemed
+  /api/v1/payments/create-order:
+    post:
+      tags: [Payments]
+      summary: Create payment order (server-calculated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      product_id:
+                        type: string
+                      variant_index:
+                        type: number
+                      qty:
+                        type: number
+                payment_method:
+                  type: string
+                address_id:
+                  type: string
+      responses:
+        "201":
+          description: Payment order created
+  /api/v1/payments/webhook:
+    post:
+      tags: [Payments]
+      summary: Razorpay webhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Webhook received
+  /api/v1/coupons:
+    post:
+      tags: [Coupons]
+      summary: Create coupon (Admin only)
+      security:
+        - adminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, discount_type, value, expires_at]
+              properties:
+                code:
+                  type: string
+                  description: Coupon code (will be uppercased)
+                user_id:
+                  type: string
+                  description: Optional user ID (coupon specific to user)
+                discount_type:
+                  type: string
+                  enum: [flat, percent]
+                value:
+                  type: number
+                  description: Discount amount (flat) or percentage
+                min_order:
+                  type: number
+                  description: Minimum order amount required
+                expires_at:
+                  type: string
+                  format: date-time
+                usage_limit:
+                  type: number
+                  description: Maximum number of times coupon can be used
+      responses:
+        "201":
+          description: Coupon created
+        "400":
+          description: Invalid input
+        "500":
+          description: Server error
+  /api/v1/coupons/admin/all:
+    get:
+      tags: [Coupons]
+      summary: Get all coupons (Admin only)
+      security:
+        - adminBearerAuth: []
+      responses:
+        "200":
+          description: All coupons with populated user data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "500":
+          description: Server error
+  /api/v1/coupons/admin/stats:
+    get:
+      tags: [Coupons]
+      summary: Get coupon statistics (Admin only)
+      security:
+        - adminBearerAuth: []
+      responses:
+        "200":
+          description: Coupon statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      totalCoupons:
+                        type: number
+                      activeCoupons:
+                        type: number
+                      expiredCoupons:
+                        type: number
+                      validCoupons:
+                        type: number
+        "500":
+          description: Server error
+  /api/v1/coupons/{id}:
+    put:
+      tags: [Coupons]
+      summary: Update coupon (Admin only)
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Coupon ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                discount_type:
+                  type: string
+                  enum: [flat, percent]
+                value:
+                  type: number
+                min_order:
+                  type: number
+                expires_at:
+                  type: string
+                  format: date-time
+                usage_limit:
+                  type: number
+                is_active:
+                  type: boolean
+      responses:
+        "200":
+          description: Coupon updated
+        "404":
+          description: Coupon not found
+        "500":
+          description: Server error
+    delete:
+      tags: [Coupons]
+      summary: Delete coupon (Admin only)
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Coupon ID
+      responses:
+        "200":
+          description: Coupon deleted
+        "404":
+          description: Coupon not found
+        "500":
+          description: Server error
+  /api/v1/coupons/{id}/toggle:
+    patch:
+      tags: [Coupons]
+      summary: Toggle coupon active status (Admin only)
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Coupon ID
+      responses:
+        "200":
+          description: Coupon status toggled
+        "404":
+          description: Coupon not found
+        "500":
+          description: Server error
+  /api/v1/coupons/{userId}:
+    get:
+      tags: [Coupons]
+      summary: List active, non-expired coupons for user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: User ID to get coupons for
+      responses:
+        "200":
+          description: Coupons available for user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+        "500":
+          description: Server error
+  /api/v1/coupons/apply:
+    post:
+      tags: [Coupons]
+      summary: Apply coupon to calculate discount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, user_id, order_total]
+              properties:
+                code:
+                  type: string
+                  description: Coupon code to apply
+                user_id:
+                  type: string
+                  description: User ID applying the coupon
+                order_total:
+                  type: number
+                  description: Order total before discount
+      responses:
+        "200":
+          description: Coupon applied successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      discount:
+                        type: number
+                      new_total:
+                        type: number
+        "400":
+          description: Invalid coupon (expired, limit reached, below min order)
+        "403":
+          description: Coupon not valid for this user
+        "404":
+          description: Coupon not found
+        "500":
+          description: Server error
+  /api/product/add-product:
+    post:
+      tags: [Products]
+      summary: Add product
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        "201":
+          description: Product created
+  /api/product/get-product:
+    get:
+      tags: [Products]
+      summary: Get all products
+      parameters:
+        - name: category_id
+          in: query
+          schema:
+            type: string
+        - name: brand_id
+          in: query
+          schema:
+            type: string
+        - name: crop_id
+          in: query
+          schema:
+            type: string
+        - name: pest_id
+          in: query
+          schema:
+            type: string
+        - name: delivery_speed
+          in: query
+          schema:
+            type: string
+            enum: [30-45 min, same day, tomorrow, within 3 days, within 1 week]
+        - name: formulation
+          in: query
+          schema:
+            type: string
+        - name: usage_method
+          in: query
+          schema:
+            type: string
+        - name: mode_of_action
+          in: query
+          schema:
+            type: string
+        - name: product_form
+          in: query
+          schema:
+            type: string
+        - name: packaging
+          in: query
+          schema:
+            type: string
+        - name: in_stock
+          in: query
+          schema:
+            type: string
+            enum: [true, false]
+        - name: min_price
+          in: query
+          schema:
+            type: number
+        - name: max_price
+          in: query
+          schema:
+            type: number
+        - name: min_rating
+          in: query
+          schema:
+            type: number
+        - name: discount_min
+          in: query
+          schema:
+            type: number
+        - name: discount_max
+          in: query
+          schema:
+            type: number
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [price_low, price_high, rating, az, za]
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: user_type
+          in: query
+          schema:
+            type: string
+            enum: [Farmer, Agri-Retailer, Agent]
+      responses:
+        "200":
+          description: Products
+  /api/product/get-id-product/{id}:
+    get:
+      tags: [Products]
+      summary: Get product by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: user_type
+          in: query
+          schema:
+            type: string
+            enum: [Farmer, Agri-Retailer, Agent]
+      responses:
+        "200":
+          description: Product
+  /api/product/update-product/{id}:
+    put:
+      tags: [Products]
+      summary: Update product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        "200":
+          description: Product updated
+  /api/product/delete-product/{id}:
+    delete:
+      tags: [Products]
+      summary: Delete product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Product deleted
+  /api/category/add-category:
+    post:
+      tags: [Categories]
+      summary: Add category
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Category created
+  /api/category/get-category:
+    get:
+      tags: [Categories]
+      summary: Get categories
+      responses:
+        "200":
+          description: Categories
+  /api/category/get-by-id-category/{id}:
+    get:
+      tags: [Categories]
+      summary: Get category by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Category
+  /api/category/update-category/{id}:
+    put:
+      tags: [Categories]
+      summary: Update category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Category updated
+  /api/category/delete-category/{id}:
+    delete:
+      tags: [Categories]
+      summary: Delete category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Category deleted
+  /api/subcategory/add-sub-category:
+    post:
+      tags: [Subcategories]
+      summary: Add subcategory
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Subcategory created
+  /api/subcategory/get-sub-category:
+    get:
+      tags: [Subcategories]
+      summary: Get subcategories
+      responses:
+        "200":
+          description: Subcategories
+  /api/subcategory/get-id-sub-category/{id}:
+    get:
+      tags: [Subcategories]
+      summary: Get subcategory by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Subcategory
+  /api/subcategory/update-sub-category/{id}:
+    put:
+      tags: [Subcategories]
+      summary: Update subcategory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Subcategory updated
+  /api/subcategory/delete-sub-category/{id}:
+    delete:
+      tags: [Subcategories]
+      summary: Delete subcategory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Subcategory deleted
+  /api/super-category/add-super-category:
+    post:
+      tags: [SuperCategories]
+      summary: Add super category
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Super category created
+  /api/super-category/get-super-category:
+    get:
+      tags: [SuperCategories]
+      summary: Get super categories
+      responses:
+        "200":
+          description: Super categories
+  /api/super-category/get-by-id-super-category/{id}:
+    get:
+      tags: [SuperCategories]
+      summary: Get super category by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Super category
+  /api/super-category/update-super-category/{id}:
+    put:
+      tags: [SuperCategories]
+      summary: Update super category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Super category updated
+  /api/super-category/delete-super-category/{id}:
+    delete:
+      tags: [SuperCategories]
+      summary: Delete super category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Super category deleted
+  /api/brand/add-brand:
+    post:
+      tags: [Brands]
+      summary: Add brand
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Brand created
+  /api/brand/get-brand:
+    get:
+      tags: [Brands]
+      summary: Get brands
+      responses:
+        "200":
+          description: Brands
+  /api/brand/get-id-brand/{id}:
+    get:
+      tags: [Brands]
+      summary: Get brand by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Brand
+  /api/brand/update-brand/{id}:
+    put:
+      tags: [Brands]
+      summary: Update brand
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Brand updated
+  /api/brand/delete-brand/{id}:
+    delete:
+      tags: [Brands]
+      summary: Delete brand
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Brand deleted
+  /api/crop/add-crop:
+    post:
+      tags: [Crops]
+      summary: Add crop
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Crop created
+  /api/crop/get-crops:
+    get:
+      tags: [Crops]
+      summary: Get crops
+      responses:
+        "200":
+          description: Crops
+  /api/crop/get-id-crop/{id}:
+    get:
+      tags: [Crops]
+      summary: Get crop by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Crop
+  /api/crop/update-crop/{id}:
+    put:
+      tags: [Crops]
+      summary: Update crop
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Crop updated
+  /api/crop/delete-crop/{id}:
+    delete:
+      tags: [Crops]
+      summary: Delete crop
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Crop deleted
+  /api/pest/add-pest:
+    post:
+      tags: [Pests]
+      summary: Add pest
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Pest created
+  /api/pest/get-pests:
+    get:
+      tags: [Pests]
+      summary: Get pests
+      responses:
+        "200":
+          description: Pests
+  /api/pest/get-pests/{cropId}:
+    get:
+      tags: [Pests]
+      summary: Get pests by crop
+      parameters:
+        - name: cropId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pests
+  /api/pest/get-pest/{id}:
+    get:
+      tags: [Pests]
+      summary: Get pest by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pest
+  /api/pest/update-pest/{id}:
+    put:
+      tags: [Pests]
+      summary: Update pest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Pest updated
+  /api/pest/delete-pest/{id}:
+    delete:
+      tags: [Pests]
+      summary: Delete pest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pest deleted
+  /api/order/add-order:
+    post:
+      tags: [Orders]
+      summary: Add order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Order created
+  /api/order/get-orders:
+    get:
+      tags: [Orders]
+      summary: Get orders
+      responses:
+        "200":
+          description: Orders
+  /api/order/get-order-by-id/{id}:
+    get:
+      tags: [Orders]
+      summary: Get order by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order
+  /api/order/update-order/{id}:
+    put:
+      tags: [Orders]
+      summary: Update order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order updated
+  /api/order/delete-order/{id}:
+    delete:
+      tags: [Orders]
+      summary: Delete order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order deleted
+  /api/counter/add-counter:
+    post:
+      tags: [Counters]
+      summary: Add counter
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Counter created
+  /api/counter/get-counters:
+    get:
+      tags: [Counters]
+      summary: Get counters
+      responses:
+        "200":
+          description: Counters
+  /api/counter/get-id-counter/{id}:
+    get:
+      tags: [Counters]
+      summary: Get counter by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Counter
+  /api/counter/update-counter/{id}:
+    put:
+      tags: [Counters]
+      summary: Update counter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Counter updated
+  /api/counter/delete-counter/{id}:
+    delete:
+      tags: [Counters]
+      summary: Delete counter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Counter deleted
+  /api/entrepreneur/add-entrepreneur:
+    post:
+      tags: [Entrepreneurs]
+      summary: Add entrepreneur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Entrepreneur created
+  /api/entrepreneur/get-entrepreneurs:
+    get:
+      tags: [Entrepreneurs]
+      summary: Get entrepreneurs
+      responses:
+        "200":
+          description: Entrepreneurs
+  /api/entrepreneur/update-entrepreneur/{id}:
+    put:
+      tags: [Entrepreneurs]
+      summary: Update entrepreneur
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Entrepreneur updated
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    adminBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

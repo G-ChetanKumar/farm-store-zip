@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.scrollbar-hide {
+  scrollbar-width: none; /* For Firefox */
+  -ms-overflow-style: none; /* For IE and Edge */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* For Chrome, Safari, and Opera */
+}
+
+.group:hover .group-hover\:block {
+  display: block;
+}
+
+.group:hover .group-hover\:visible {
+  visibility: visible;
+}
+
+.group:hover .group-hover\:invisible {
+  visibility: visible;
+}
+
+/* Language Selector Styling */
+.custom-select {
+  position: relative;
+  display: inline-block;
+}
+
+.language-display {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 0.25rem;
+  font-size: 1rem;
+  cursor: pointer;
+  background-color: white;
+}
+
+.arrow-icon {
+  margin-left: 0.5rem;
+  font-size: 1rem;
+  color: #000;
+}
+
+/* Animation for rotating text */
+@keyframes rotateLanguages {
+  0% { content: 'E'; }
+  33% { content: 'हिं'; }
+  66% { content: 'తె'; }
+  100% { content: 'E'; }
+}
+
+.animated-language::after {
+  content: 'E';
+  animation: rotateLanguages 3s infinite;
+  display: inline-block;
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #000;
+  margin-right: 0.5rem;
+}
+
+/* Hide actual select */
+.hidden-select {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+}
+

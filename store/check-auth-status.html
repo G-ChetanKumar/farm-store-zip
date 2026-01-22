@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Status Checker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .status-box {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .good { color: #10b981; font-weight: bold; }
+        .bad { color: #ef4444; font-weight: bold; }
+        .warning { color: #f59e0b; font-weight: bold; }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #2563eb; }
+        .danger { background: #ef4444; }
+        .danger:hover { background: #dc2626; }
+        pre {
+            background: #1f2937;
+            color: #10b981;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔐 Authentication Status Checker</h1>
+    
+    <div class="status-box">
+        <h2>📦 LocalStorage Tokens</h2>
+        <div id="localStorage-status"></div>
+    </div>
+    
+    <div class="status-box">
+        <h2>🍪 Cookies (Document.cookie)</h2>
+        <div id="cookie-status"></div>
+    </div>
+    
+    <div class="status-box">
+        <h2>👤 User Info</h2>
+        <div id="user-status"></div>
+    </div>
+    
+    <div class="status-box">
+        <h2>🔧 Actions</h2>
+        <button onclick="clearAll()">🗑️ Clear All & Logout</button>
+        <button onclick="testAPI()">🧪 Test API Call</button>
+        <button onclick="location.reload()">🔄 Refresh</button>
+    </div>
+    
+    <div class="status-box" id="test-results" style="display: none;">
+        <h2>🧪 API Test Results</h2>
+        <div id="test-output"></div>
+    </div>
+
+    <script>
+        function checkStatus() {
+            // Check localStorage
+            const csrfToken = localStorage.getItem('csrfToken');
+            const token = localStorage.getItem('token');
+            const authToken = localStorage.getItem('authToken');
+            const user = localStorage.getItem('user');
+            const userType = localStorage.getItem('userType');
+            
+            let localStorageHTML = '<ul>';
+            localStorageHTML += `<li>csrfToken: ${csrfToken ? '<span class="good">✅ EXISTS (' + csrfToken.substring(0, 20) + '...)</span>' : '<span class="bad">❌ MISSING</span>'}</li>`;
+            localStorageHTML += `<li>token: ${token ? '<span class="good">✅ EXISTS</span>' : '<span class="bad">❌ MISSING</span>'}</li>`;
+            localStorageHTML += `<li>authToken: ${authToken ? '<span class="good">✅ EXISTS</span>' : '<span class="bad">❌ MISSING</span>'}</li>`;
+            localStorageHTML += `<li>user: ${user ? '<span class="good">✅ EXISTS</span>' : '<span class="bad">❌ MISSING</span>'}</li>`;
+            localStorageHTML += `<li>userType: ${userType ? '<span class="good">✅ ' + userType + '</span>' : '<span class="bad">❌ MISSING</span>'}</li>`;
+            localStorageHTML += '</ul>';
+            
+            document.getElementById('localStorage-status').innerHTML = localStorageHTML;
+            
+            // Check cookies
+            const cookies = document.cookie;
+            let cookieHTML = '';
+            
+            if (!cookies || cookies.trim() === '') {
+                cookieHTML = '<span class="bad">❌ NO COOKIES FOUND</span>';
+            } else {
+                const cookieArr = cookies.split(';').map(c => c.trim());
+                const hasAccessToken = cookieArr.some(c => c.startsWith('accessToken='));
+                const hasRefreshToken = cookieArr.some(c => c.startsWith('refreshToken='));
+                
+                cookieHTML = '<ul>';
+                cookieHTML += `<li>accessToken (HTTP-only): ${hasAccessToken ? '<span class="good">✅ EXISTS</span>' : '<span class="bad">❌ MISSING (CRITICAL!)</span>'}</li>`;
+                cookieHTML += `<li>refreshToken (HTTP-only): ${hasRefreshToken ? '<span class="good">✅ EXISTS</span>' : '<span class="bad">❌ MISSING</span>'}</li>`;
+                cookieHTML += '</ul>';
+                
+                cookieHTML += '<p><strong>All cookies:</strong></p><pre>' + JSON.stringify(cookieArr, null, 2) + '</pre>';
+            }
+            
+            document.getElementById('cookie-status').innerHTML = cookieHTML;
+            
+            // Check user info
+            let userHTML = '';
+            if (user) {
+                try {
+                    const userData = JSON.parse(user);
+                    userHTML = '<pre>' + JSON.stringify(userData, null, 2) + '</pre>';
+                } catch (e) {
+                    userHTML = '<span class="bad">❌ Invalid JSON</span>';
+                }
+            } else {
+                userHTML = '<span class="bad">❌ No user data found</span>';
+            }
+            
+            document.getElementById('user-status').innerHTML = userHTML;
+            
+            // Diagnosis
+            const diagnosis = document.createElement('div');
+            diagnosis.className = 'status-box';
+            diagnosis.innerHTML = '<h2>🔍 Diagnosis</h2>';
+            
+            let diagnosisText = '';
+            
+            if (!csrfToken && !token && !authToken) {
+                diagnosisText += '<p class="bad">❌ <strong>CRITICAL:</strong> No tokens in localStorage. You are NOT logged in!</p>';
+                diagnosisText += '<p><strong>Action:</strong> Go to <a href="/login">/login</a> and login again.</p>';
+            } else if (csrfToken && !cookies.includes('accessToken')) {
+                diagnosisText += '<p class="bad">❌ <strong>CRITICAL:</strong> CSRF token exists but HTTP-only cookie is MISSING!</p>';
+                diagnosisText += '<p>This means you logged in with OLD code before cookies were implemented.</p>';
+                diagnosisText += '<p><strong>Action:</strong> Clear all data and re-login to get new cookies.</p>';
+            } else if (csrfToken && cookies.includes('accessToken')) {
+                diagnosisText += '<p class="good">✅ <strong>GOOD:</strong> You have both CSRF token and cookies!</p>';
+                diagnosisText += '<p>Authentication should work. If you still get 401 errors, the cookie might be expired.</p>';
+            } else {
+                diagnosisText += '<p class="warning">⚠️ <strong>PARTIAL:</strong> Some tokens exist but setup is incomplete.</p>';
+            }
+            
+            diagnosis.innerHTML += diagnosisText;
+            
+            const existingDiag = document.querySelector('body > div:last-child');
+            if (existingDiag && existingDiag.innerHTML.includes('Diagnosis')) {
+                existingDiag.remove();
+            }
+            document.body.appendChild(diagnosis);
+        }
+        
+        function clearAll() {
+            if (confirm('⚠️ This will clear ALL localStorage and cookies. Continue?')) {
+                localStorage.clear();
+                document.cookie.split(";").forEach(c => {
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+                });
+                alert('✅ Cleared! Redirecting to login...');
+                window.location.href = '/login';
+            }
+        }
+        
+        async function testAPI() {
+            const resultsDiv = document.getElementById('test-results');
+            const outputDiv = document.getElementById('test-output');
+            
+            resultsDiv.style.display = 'block';
+            outputDiv.innerHTML = '<p>🔄 Testing API call to /v1/addresses...</p>';
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/v1/addresses', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': localStorage.getItem('csrfToken') || ''
+                    },
+                    credentials: 'include' // Important: send cookies
+                });
+                
+                const data = await response.json();
+                
+                let resultHTML = `<p><strong>Status:</strong> ${response.status} ${response.statusText}</p>`;
+                resultHTML += `<p><strong>Response:</strong></p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                
+                if (response.status === 401) {
+                    resultHTML += '<p class="bad">❌ <strong>FAILED:</strong> 401 Unauthorized</p>';
+                    resultHTML += '<p>This confirms authentication is broken. You need to re-login!</p>';
+                } else if (response.ok) {
+                    resultHTML += '<p class="good">✅ <strong>SUCCESS:</strong> API call worked!</p>';
+                } else {
+                    resultHTML += '<p class="warning">⚠️ <strong>ERROR:</strong> Unexpected status</p>';
+                }
+                
+                outputDiv.innerHTML = resultHTML;
+            } catch (error) {
+                outputDiv.innerHTML = `<p class="bad">❌ <strong>ERROR:</strong> ${error.message}</p>`;
+            }
+        }
+        
+        // Run on load
+        checkStatus();
+    </script>
+</body>
+</html>

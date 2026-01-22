@@ -1,0 +1,869 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useCart } from "../contexts/CartContext";
+import { MapPin, Plus, Check, Home, Building, Edit2, User, Mail, Phone as PhoneIcon } from "lucide-react";
+import BASE_URL from "../Helper/Helper";
+import { addressService } from "../services";
+import { toast } from "react-toastify";
+
+const RazorpayCheckout = () => {
+  const navigate = useNavigate();
+  const { cartItems, clearCart } = useCart(); // Access cart items and clearCart function
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [useNewAddress, setUseNewAddress] = useState(false);
+  const [userDetails, setUserDetails] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    address: "",
+    pincode: "",
+  });
+  const [orderNotes, setOrderNotes] = useState("");
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paymentDetails, setPaymentDetails] = useState(null);
+  const [membership, setMembership] = useState(null);
+  const [membershipDiscount, setMembershipDiscount] = useState(0);
+  
+  // New states for delivery options
+  const [deliveryType, setDeliveryType] = useState("home"); // "home" or "pickup"
+  const [paymentMethod, setPaymentMethod] = useState("online"); // "online" or "cod"
+
+  useEffect(() => {
+    fetchSavedAddresses();
+    fetchUserMembership();
+  }, []);
+  
+  const fetchUserMembership = async () => {
+    try {
+      const storedUser = localStorage.getItem("user");
+      if (!storedUser) return;
+      
+      const user = JSON.parse(storedUser);
+      
+      // Only fetch membership for Farmers
+      if (user.user_type !== "Farmer") return;
+      
+      const response = await fetch(`${BASE_URL}/v1/membership/subscription/${user.id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`
+        }
+      });
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        setMembership(data.data);
+        // Calculate discount
+        const subtotal = calculateSubtotal();
+        const discount = (subtotal * data.data.plan_id.cashback_percent) / 100;
+        setMembershipDiscount(Math.round(discount));
+      }
+    } catch (error) {
+      // No active membership
+      setMembership(null);
+      setMembershipDiscount(0);
+    }
+  };
+
+  const fetchSavedAddresses = async () => {
+    try {
+      const storedUser = localStorage.getItem("user");
+      if (!storedUser) {
+        console.log("No user found, skipping address fetch");
+        return;
+      }
+      
+      const user = JSON.parse(storedUser);
+      
+      // Use the new v1 API
+      const result = await addressService.getAddresses();
+      
+      if (result.success && result.data && Array.isArray(result.data)) {
+        setSavedAddresses(result.data);
+        console.log("✅ Loaded addresses:", result.data.length);
+        
+        // Auto-select default address
+        const defaultAddr = result.data.find(addr => addr.is_default);
+        if (defaultAddr) {
+          setSelectedAddressId(defaultAddr._id);
+          setUserDetails({
+            name: defaultAddr.name || user.name || "",
+            phone: defaultAddr.phone || user.mobile || "",
+            email: user.email || "",
+            address: `${defaultAddr.line1}${defaultAddr.line2 ? ', ' + defaultAddr.line2 : ''}, ${defaultAddr.city}, ${defaultAddr.state}`,
+            pincode: defaultAddr.postal_code,
+          });
+          console.log("✅ Auto-selected default address");
+        } else if (result.data.length > 0) {
+          // Auto-select first address if no default
+          const firstAddr = result.data[0];
+          setSelectedAddressId(firstAddr._id);
+          setUserDetails({
+            name: firstAddr.name || user.name || "",
+            phone: firstAddr.phone || user.mobile || "",
+            email: user.email || "",
+            address: `${firstAddr.line1}${firstAddr.line2 ? ', ' + firstAddr.line2 : ''}, ${firstAddr.city}, ${firstAddr.state}`,
+            pincode: firstAddr.postal_code,
+          });
+          console.log("✅ Auto-selected first address");
+        }
+      } else {
+        // Pre-fill with user data if no addresses found
+        if (user) {
+          setUserDetails({
+            name: user.name || "",
+            phone: user.mobile || "",
+            email: user.email || "",
+            address: "",
+            pincode: "",
+          });
+        }
+        console.log("ℹ️ No addresses found, pre-filled with user data");
+      }
+    } catch (error) {
+      console.error("❌ Error fetching addresses:", error);
+      toast.error("Could not load saved addresses");
+    }
+  };
+
+  const handleAddressSelect = (address) => {
+    console.log("🏠 Address selected:", address);
+    setSelectedAddressId(address._id);
+    setUseNewAddress(false);
+    const storedUser = localStorage.getItem("user");
+    const user = storedUser ? JSON.parse(storedUser) : null;
+    
+    const updatedDetails = {
+      name: address.name || (user?.name || ""),
+      phone: address.phone || (user?.mobile || ""),
+      email: user?.email || "",
+      address: `${address.line1}${address.line2 ? ', ' + address.line2 : ''}, ${address.city}, ${address.state}`,
+      pincode: address.postal_code,
+    };
+    
+    console.log("📝 Updated user details:", updatedDetails);
+    setUserDetails(updatedDetails);
+    console.log("✅ Selected address:", address.label);
+  };
+
+  const handleNewAddress = () => {
+    setUseNewAddress(true);
+    setSelectedAddressId(null);
+    const storedUser = localStorage.getItem("user");
+    const user = storedUser ? JSON.parse(storedUser) : null;
+    
+    setUserDetails({
+      name: user?.name || "",
+      phone: user?.mobile || "",
+      email: user?.email || "",
+      address: "",
+      pincode: "",
+    });
+  };
+
+  const handleBackToHome = () => {
+    navigate("/"); // Navigate to the homepage
+  };
+
+  const calculateSubtotal = () => {
+    return cartItems.reduce((total, item) => {
+      const itemPrice = parseFloat(item.variant.price);
+      return total + itemPrice * item.quantity;
+    }, 0);
+  };
+
+  const calculateSavings = () => {
+    return cartItems.reduce((total, item) => {
+      const originalPrice = parseFloat(item.variant.originalPrice);
+      const currentPrice = parseFloat(item.variant.price);
+      return total + (originalPrice - currentPrice) * item.quantity;
+    }, 0);
+  };
+  
+  const calculateFinalTotal = () => {
+    return calculateSubtotal() - membershipDiscount;
+  };
+
+  const handleOrderCreation = async (razorpayResponse = null) => {
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) {
+      alert("Please login to place an order");
+      return;
+    }
+
+    const user = JSON.parse(storedUser);
+    const selectedCounter = localStorage.getItem("selectedCounter");
+    const counterData = selectedCounter ? JSON.parse(selectedCounter) : null;
+    
+    const orderData = {
+      name: userDetails.name,
+      user_id: user.id, // Using logged-in user's ID
+      date: new Date().toISOString().split("T")[0],
+      razorpay_payment_status: razorpayResponse ? razorpayResponse.razorpay_payment_id : null,
+      transaction_id: razorpayResponse ? razorpayResponse.razorpay_order_id : null,
+      products: cartItems.map((item) => ({
+        product_id: item.id,
+        quantity: item.quantity,
+      })),
+      role: user.user_type, // Add user type for backend
+      order_status: "pending",
+      address: deliveryType === "home" ? userDetails.address : (counterData ? counterData.address : "Store Pickup"),
+      phone: userDetails.phone,
+      pincode: deliveryType === "home" ? userDetails.pincode : (counterData ? counterData.pincode : ""),
+      total_amount: calculateFinalTotal(), // Use final total with membership discount
+      apply_membership: membership ? true : false, // Apply membership if available
+      status: "active",
+      delivery_type: deliveryType, // "home" or "pickup"
+      payment_method: paymentMethod, // "online" or "cod"
+      counter_id: counterData ? counterData._id : null,
+      counter_name: counterData ? counterData.type : null,
+    };
+
+    try {
+      const response = await fetch(`${BASE_URL}/order/add-order`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        console.error("Order creation failed:", result.message);
+      }
+    } catch (error) {
+      console.error("Error creating order:", error);
+    }
+  };
+
+  const handlePayment = async () => {
+    console.log("🔍 handlePayment called");
+    console.log("📋 User Details:", userDetails);
+    console.log("📦 Delivery Type:", deliveryType);
+    console.log("💳 Payment Method:", paymentMethod);
+    
+    // Validation - Check if store is required for pickup
+    if (deliveryType === "pickup") {
+      const selectedCounter = localStorage.getItem("selectedCounter");
+      if (!selectedCounter) {
+        toast.error("Please select a store for pickup");
+        return;
+      }
+    }
+    
+    // Validate user details
+    if (!userDetails.name || !userDetails.name.trim()) {
+      console.error("❌ Validation failed: Name is empty");
+      toast.error("Please enter your name");
+      return;
+    }
+    if (!userDetails.phone || userDetails.phone.length !== 10) {
+      console.error("❌ Validation failed: Phone invalid -", userDetails.phone);
+      toast.error("Please enter a valid 10-digit phone number");
+      return;
+    }
+    
+    // Address is required only for home delivery
+    if (deliveryType === "home") {
+      if (!userDetails.address || !userDetails.address.trim()) {
+        console.error("❌ Validation failed: Address is empty");
+        toast.error("Please enter your complete address");
+        return;
+      }
+      if (!userDetails.pincode || userDetails.pincode.length !== 6) {
+        console.error("❌ Validation failed: Pincode invalid -", userDetails.pincode);
+        toast.error("Please enter a valid 6-digit pincode");
+        return;
+      }
+    }
+    
+    console.log("✅ All validations passed, proceeding to", paymentMethod === "online" ? "online payment" : "order placement");
+
+    // If COD, create order directly without payment
+    if (paymentMethod === "cod") {
+      try {
+        await handleOrderCreation(null);
+        clearCart();
+        setPaymentSuccess(true);
+        setPaymentDetails({
+          orderId: "COD-" + Date.now(),
+          paymentId: "COD",
+          amount: calculateFinalTotal(),
+        });
+        toast.success("Order placed successfully!");
+      } catch (error) {
+        console.error("Error creating COD order:", error);
+        toast.error("Failed to place order. Please try again.");
+      }
+      return;
+    }
+
+    // Online payment flow
+    try {
+      const response = await fetch(
+        `${BASE_URL}/razorpay/create-razorpay-order`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount: calculateFinalTotal(), // Use final total with membership discount
+            currency: "INR",
+            notes: { orderNotes },
+          }),
+        }
+      );
+
+      const orderData = await response.json();
+
+      const options = {
+        key: "rzp_test_lAupy84di3wKt5",
+        amount: orderData.amount,
+        currency: orderData.currency,
+        order_id: orderData.id,
+        name: "Farm-E Store",
+        description: "Secure Checkout",
+        handler: async function (response) {
+          await handleOrderCreation(response);
+          clearCart();
+          setPaymentSuccess(true);
+          setPaymentDetails({
+            orderId: response.razorpay_order_id,
+            paymentId: response.razorpay_payment_id,
+            amount: orderData.amount / 100,
+          });
+        },
+        prefill: {
+          name: userDetails.name,
+          email: "testuser@example.com", // Replace or capture user email if available
+          contact: userDetails.phone,
+        },
+        notes: { orderNotes },
+        theme: {
+          color: "#F37254",
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (error) {
+      console.error("Error occurred:", error);
+      alert("Something went wrong. Please try again!");
+    }
+  };
+
+  if (paymentSuccess) {
+    const isCOD = paymentDetails?.paymentId === "COD";
+    return (
+      <div className="min-h-screen bg-gray-100 flex flex-col items-center py-8">
+        <div className="bg-white p-6 rounded-lg shadow-md w-11/12 max-w-3xl text-center">
+          <div className="mb-4">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Check size={40} className="text-green-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-green-600 mb-2">
+              {isCOD ? "Order Placed Successfully!" : "Payment Successful!"}
+            </h1>
+            <p className="text-gray-700">
+              {isCOD 
+                ? deliveryType === "pickup"
+                  ? "Your order is confirmed. Please collect from the selected store and pay there."
+                  : "Your order is confirmed. Please pay when the order is delivered."
+                : "Thank you for your purchase. Your payment was successful."
+              }
+            </p>
+          </div>
+          <div className="mt-4 bg-gray-50 p-4 rounded-lg">
+            <p className="text-sm text-gray-500">
+              Order ID: <span className="font-medium text-gray-800">{paymentDetails.orderId}</span>
+            </p>
+            {!isCOD && (
+              <p className="text-sm text-gray-500 mt-1">
+                Payment ID: <span className="font-medium text-gray-800">{paymentDetails.paymentId}</span>
+              </p>
+            )}
+            <p className="text-lg font-bold text-gray-800 mt-2">
+              Amount {isCOD ? "to Pay" : "Paid"}: ₹{paymentDetails.amount.toFixed(2)}
+            </p>
+            {deliveryType === "pickup" && (
+              <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded">
+                <p className="text-sm text-purple-800 font-medium">
+                  📍 Pickup from selected store
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="mt-6 space-x-3">
+            <button
+              className="px-6 py-3 bg-blue-500 text-white rounded text-sm font-semibold hover:bg-blue-600 transition-colors"
+              onClick={handleBackToHome}
+            >
+              Back to Home
+            </button>
+            <button
+              className="px-6 py-3 bg-gray-200 text-gray-700 rounded text-sm font-semibold hover:bg-gray-300 transition-colors"
+              onClick={() => navigate('/myorders')}
+            >
+              View Orders
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center py-8">
+      <div className="bg-white p-6 rounded-lg shadow-md w-11/12 max-w-3xl">
+        <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
+          Checkout
+        </h1>
+
+        {/* STEP 1: Delivery Type Selection - FIRST */}
+        <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-lg">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            📦 How would you like to receive your order?
+          </h3>
+          <div className="space-y-2">
+            <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
+              deliveryType === "home" 
+                ? 'border-green-500 bg-green-50' 
+                : 'border-gray-300 hover:border-green-300 bg-white'
+            }`}>
+              <input
+                type="radio"
+                name="deliveryType"
+                value="home"
+                checked={deliveryType === "home"}
+                onChange={(e) => setDeliveryType(e.target.value)}
+                className="mr-3"
+              />
+              <div className="flex-1">
+                <div className="font-medium text-sm">🏠 Home Delivery</div>
+                <div className="text-xs text-gray-600">Get products delivered to your address</div>
+              </div>
+              {deliveryType === "home" && (
+                <Check className="text-green-600" size={20} />
+              )}
+            </label>
+            <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
+              deliveryType === "pickup" 
+                ? 'border-purple-500 bg-purple-50' 
+                : 'border-gray-300 hover:border-purple-300 bg-white'
+            }`}>
+              <input
+                type="radio"
+                name="deliveryType"
+                value="pickup"
+                checked={deliveryType === "pickup"}
+                onChange={(e) => setDeliveryType(e.target.value)}
+                className="mr-3"
+              />
+              <div className="flex-1">
+                <div className="font-medium text-sm">🏪 Store Pickup</div>
+                <div className="text-xs text-gray-600">Collect from selected store</div>
+              </div>
+              {deliveryType === "pickup" && (
+                <Check className="text-purple-600" size={20} />
+              )}
+            </label>
+          </div>
+        </div>
+
+        {/* STEP 2: CONDITIONAL SECTIONS BASED ON DELIVERY TYPE */}
+        
+        {/* 2A. HOME DELIVERY: Show Address Selection */}
+        {deliveryType === "home" && (
+          <>
+            {/* User Details Summary - Shows when address is selected */}
+            {selectedAddressId && !useNewAddress && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-green-50 border-2 border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-700 flex items-center">
+                <User size={16} className="mr-2 text-blue-600" />
+                Delivery Details
+              </h3>
+              <button
+                onClick={() => {
+                  setSelectedAddressId(null);
+                  setUseNewAddress(false);
+                }}
+                className="flex items-center text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+              >
+                <Edit2 size={12} className="mr-1" />
+                Change
+              </button>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center text-sm">
+                <User size={14} className="mr-2 text-gray-500" />
+                <span className="font-medium text-gray-800">{userDetails.name}</span>
+              </div>
+              <div className="flex items-center text-sm">
+                <PhoneIcon size={14} className="mr-2 text-gray-500" />
+                <span className="text-gray-700">{userDetails.phone}</span>
+              </div>
+              {userDetails.email && (
+                <div className="flex items-center text-sm">
+                  <Mail size={14} className="mr-2 text-gray-500" />
+                  <span className="text-gray-700">{userDetails.email}</span>
+                </div>
+              )}
+              <div className="flex items-start text-sm">
+                <MapPin size={14} className="mr-2 text-gray-500 mt-0.5" />
+                <span className="text-gray-700">{userDetails.address} - {userDetails.pincode}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+            {/* Saved Addresses Section */}
+            {savedAddresses.length > 0 && !useNewAddress && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-gray-700 flex items-center">
+                      <Building size={16} className="mr-2 text-purple-600" />
+                      {deliveryType === "pickup" ? "Pickup Store" : "Fulfillment Counter"}
+                    </h3>
+                    <button
+                      onClick={() => {
+                        localStorage.removeItem("selectedCounter");
+                        window.location.reload();
+                      }}
+                      className="text-xs text-red-600 hover:text-red-800 font-medium"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center text-sm">
+                      <Building size={14} className="mr-2 text-gray-500" />
+                      <span className="font-medium text-gray-800">{counter.type}</span>
+                    </div>
+                    {counter.pincode && (
+                      <div className="flex items-center text-sm">
+                        <MapPin size={14} className="mr-2 text-gray-500" />
+                        <span className="text-gray-700">Pincode: {counter.pincode}</span>
+                      </div>
+                    )}
+                    {counter.agentName && (
+                      <div className="flex items-center text-sm">
+                        <User size={14} className="mr-2 text-gray-500" />
+                        <span className="text-gray-700">Agent: {counter.agentName}</span>
+                      </div>
+                    )}
+                    {counter.agentNumber && (
+                      <div className="flex items-center text-sm">
+                        <PhoneIcon size={14} className="mr-2 text-gray-500" />
+                        <span className="text-gray-700">{counter.agentNumber}</span>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => navigate('/locate')}
+                    className="mt-3 flex items-center text-xs text-purple-600 hover:text-purple-800 font-medium transition-colors"
+                  >
+                    <Edit2 size={12} className="mr-1" />
+                    Change Store
+                  </button>
+                </div>
+              );
+            } catch (e) {
+              return null;
+            }
+          } else if (deliveryType === "pickup") {
+            // If pickup selected but no store chosen, show message
+            return (
+              <div className="mb-6 p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
+                <div className="flex items-start">
+                  <MapPin size={16} className="mr-2 text-yellow-600 mt-0.5" />
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-1">
+                      Store Not Selected
+                    </h3>
+                    <p className="text-xs text-gray-600 mb-3">
+                      Please select a store for pickup
+                    </p>
+                    <button
+                      onClick={() => navigate('/locate')}
+                      className="text-xs px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 font-medium"
+                    >
+                      Select Store
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
+        
+        {/* Payment Method Selection */}
+        <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            Payment Method
+          </h3>
+          <div className="space-y-2">
+            <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-white transition-colors">
+              <input
+                type="radio"
+                name="paymentMethod"
+                value="online"
+                checked={paymentMethod === "online"}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="mr-3"
+              />
+              <div>
+                <div className="font-medium text-sm">Pay Online</div>
+                <div className="text-xs text-gray-600">Pay now using UPI, Card, Net Banking</div>
+              </div>
+            </label>
+            <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-white transition-colors">
+              <input
+                type="radio"
+                name="paymentMethod"
+                value="cod"
+                checked={paymentMethod === "cod"}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="mr-3"
+              />
+              <div>
+                <div className="font-medium text-sm">
+                  {deliveryType === "pickup" ? "Pay at Store" : "Cash on Delivery"}
+                </div>
+                <div className="text-xs text-gray-600">
+                  {deliveryType === "pickup" ? "Pay when you collect" : "Pay when order is delivered"}
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        {/* Saved Addresses Section */}
+        {savedAddresses.length > 0 && !useNewAddress && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-gray-800">Select Delivery Address</h2>
+              <button
+                onClick={handleNewAddress}
+                className="flex items-center space-x-1 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                title="Add New Address"
+              >
+                <Plus size={18} />
+                <span className="text-sm font-medium">New</span>
+              </button>
+            </div>
+            <div className="space-y-3 max-h-60 overflow-y-auto">
+              {savedAddresses.map((address) => (
+                <div
+                  key={address._id}
+                  onClick={() => handleAddressSelect(address)}
+                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                    selectedAddressId === address._id
+                      ? "border-green-500 bg-green-50 border-2"
+                      : "border-gray-300 hover:border-green-300"
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start space-x-3 flex-1">
+                      {address.label === "Home" ? (
+                        <Home size={18} className="text-green-600 mt-1" />
+                      ) : address.label === "Work" ? (
+                        <Building size={18} className="text-blue-600 mt-1" />
+                      ) : (
+                        <MapPin size={18} className="text-gray-600 mt-1" />
+                      )}
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-semibold text-gray-800">{address.label}</span>
+                          {address.is_default && (
+                            <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded font-medium">
+                              ✓ Default
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm font-medium text-gray-800 mt-1">{address.name}</p>
+                        <p className="text-sm text-gray-600">{address.phone}</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {address.line1}{address.line2 && `, ${address.line2}`}, {address.city}, {address.state} - {address.postal_code}
+                        </p>
+                      </div>
+                    </div>
+                    {selectedAddressId === address._id && (
+                      <Check className="text-green-600" size={20} />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Manual Address Entry */}
+        {(useNewAddress || savedAddresses.length === 0) && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-gray-800">
+                {savedAddresses.length === 0 ? "Add Delivery Address" : "New Delivery Address"}
+              </h2>
+              {savedAddresses.length > 0 && useNewAddress && (
+                <button
+                  onClick={() => setUseNewAddress(false)}
+                  className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                >
+                  <MapPin size={16} />
+                  <span>Use Saved Address</span>
+                </button>
+              )}
+            </div>
+            {savedAddresses.length === 0 && (
+              <p className="text-sm text-gray-600 mb-4">
+                Please add your delivery address to continue with the order.
+              </p>
+            )}
+            <div className="space-y-4">
+              <div className="relative">
+                <User size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Your Name *"
+                  className="w-full p-3 pl-10 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={userDetails.name}
+                  onChange={(e) =>
+                    setUserDetails({ ...userDetails, name: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="relative">
+                <PhoneIcon size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                <input
+                  type="tel"
+                  placeholder="Phone Number (10 digits) *"
+                  maxLength="10"
+                  className="w-full p-3 pl-10 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={userDetails.phone}
+                  onChange={(e) =>
+                    setUserDetails({ ...userDetails, phone: e.target.value.replace(/\D/g, '') })
+                  }
+                  required
+                />
+              </div>
+              <div className="relative">
+                <Mail size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                <input
+                  type="email"
+                  placeholder="Email Address"
+                  className="w-full p-3 pl-10 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={userDetails.email}
+                  onChange={(e) =>
+                    setUserDetails({ ...userDetails, email: e.target.value })
+                  }
+                />
+              </div>
+              <div className="relative">
+                <MapPin size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                <textarea
+                  placeholder="Complete Address (House No., Building, Street, Area) *"
+                  className="w-full p-3 pl-10 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  rows="3"
+                  value={userDetails.address}
+                  onChange={(e) =>
+                    setUserDetails({ ...userDetails, address: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="relative">
+                <MapPin size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Pincode (6 digits) *"
+                  maxLength="6"
+                  className="w-full p-3 pl-10 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={userDetails.pincode}
+                  onChange={(e) =>
+                    setUserDetails({ ...userDetails, pincode: e.target.value.replace(/\D/g, '') })
+                  }
+                  required
+                />
+              </div>
+            </div>
+          </div>
+        )}
+        <textarea
+          placeholder="Add order notes (optional)"
+          className="w-full p-2 border rounded text-sm mb-4"
+          rows="3"
+          value={orderNotes}
+          onChange={(e) => setOrderNotes(e.target.value)}
+        />
+        <div className="space-y-2 mb-4">
+          <div className="flex justify-between text-sm">
+            <span>Items Total</span>
+            <span>₹{calculateSubtotal().toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-sm text-green-600">
+            <span>Total Savings</span>
+            <span>₹{calculateSavings().toFixed(2)}</span>
+          </div>
+          
+          {/* Membership Discount */}
+          {membership && membershipDiscount > 0 && (
+            <>
+              <div className="flex justify-between text-sm font-medium border-t border-gray-200 pt-2">
+                <span>Subtotal</span>
+                <span>₹{calculateSubtotal().toFixed(2)}</span>
+              </div>
+              <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3 my-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🌟</span>
+                    <div>
+                      <p className="text-sm font-semibold text-yellow-800">
+                        {membership.plan_id?.name} Membership Applied
+                      </p>
+                      <p className="text-xs text-yellow-700">
+                        {membership.plan_id?.cashback_percent}% discount
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-green-600">
+                    -₹{membershipDiscount.toFixed(2)}
+                  </span>
+                </div>
+                <p className="text-xs text-yellow-700 mt-2">
+                  Purchases left after order: {membership.purchases_left - 1}
+                </p>
+              </div>
+            </>
+          )}
+          
+          <div className="flex justify-between font-bold text-lg border-t-2 border-gray-300 pt-2">
+            <span>Total to Pay</span>
+            <span className="text-green-600">₹{calculateFinalTotal().toFixed(2)}</span>
+          </div>
+          
+          {membership && membershipDiscount > 0 && (
+            <p className="text-xs text-green-600 text-center">
+              ✓ You're saving ₹{membershipDiscount.toFixed(2)} with your membership!
+            </p>
+          )}
+        </div>
+        <button
+          className="w-full p-3 bg-blue-500 text-white rounded text-sm font-semibold hover:bg-blue-600 transition-colors"
+          onClick={handlePayment}
+        >
+          Proceed to Pay ₹{calculateFinalTotal().toFixed(2)}
+        </button>
+        <p className="text-xs text-gray-500 mt-2 text-center">
+          Shipping, taxes, and discount codes will be calculated at checkout.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default RazorpayCheckout;
