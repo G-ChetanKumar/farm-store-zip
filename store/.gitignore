@@ -22,9 +22,8 @@ dist/
 build/
 *.log
 
+# Vite
+.vite/
+
 # OS
 Thumbs.db
-
-# Testing
-.coverage
-.nyc_output/

@@ -17,10 +17,7 @@ const config = require("./config/db");
 async function updateAdminCredentials() {
   try {
     console.log("🔄 Connecting to database...");
-    await mongoose.connect(config.dbURI, { 
-      useNewUrlParser: true, 
-      useUnifiedTopology: true 
-    });
+    await mongoose.connect(config.dbURI);
     console.log("✅ Connected to MongoDB");
 
     // Hash the new password
